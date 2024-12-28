@@ -323,26 +323,26 @@ namespace OsEngine.Robots.Snapio
                 var _oldStopLossPrice = position.StopOrderPrice == 0 ? _lastFractalDown : position.StopOrderPrice;
                 var _stopLossPrice = _lastPrice - (position.EntryPrice - _oldStopLossPrice);
                 var takeProfit = _lastPrice + _stopLossPrice * TakeProfit.ValueDecimal;
-                if (position.StopOrderPrice < _stopLossPrice)
-                    _tab.CloseAtStop(position, _stopLossPrice, _stopLossPrice - Slippage.ValueInt * _tab.Security.PriceStep);
+                // if (position.StopOrderPrice < _stopLossPrice)
+                    _tab.CloseAtStop(position, _lastFractalDown, _lastFractalDown - Slippage.ValueInt * _tab.Security.PriceStep);
 
                 // if (position.ProfitOrderPrice < takeProfit)
                     _tab.CloseAtProfit(
-                    position, takeProfit,
-                    takeProfit - Slippage.ValueInt * _tab.Security.PriceStep);
+                    position, _lastFractalUp,
+                    _lastFractalUp - Slippage.ValueInt * _tab.Security.PriceStep);
             }
             else
             {
                 var potentialLoss = _lastFractalUp - position.EntryPrice;
                 var takeProfit = position.EntryPrice - potentialLoss * TakeProfit.ValueDecimal;
 
-                if (position.ClosePrice == 0 || position.ClosePrice > _lastFractalUp)
+                // if (position.ClosePrice == 0 || position.ClosePrice > _lastFractalUp)
                     _tab.CloseAtStop(position, _lastFractalUp, _lastFractalUp + Slippage.ValueInt * _tab.Security.PriceStep);
 
-                if (position.ProfitOrderPrice == 0 || position.ProfitOrderPrice > takeProfit)
+                // if (position.ProfitOrderPrice == 0 || position.ProfitOrderPrice > takeProfit)
                     _tab.CloseAtProfit(
-                    position, takeProfit,
-                    takeProfit + Slippage.ValueInt * _tab.Security.PriceStep);
+                    position, _lastFractalDown,
+                    _lastFractalDown + Slippage.ValueInt * _tab.Security.PriceStep);
             }
         }
 
@@ -360,13 +360,14 @@ namespace OsEngine.Robots.Snapio
                 // && _lastAo > _secondAo && _secondAo > _thirdAo
                 // && ((_lastAo > _secondAo && _secondAo <= 0 && _lastAo > 0)
                 // || (_lastAo < 0 && _lastAo > _secondAo && _secondAo > _thirdAo))
-                !openPosition.Where(x=>x.Direction == Side.Buy).Any() &&
+                !openPosition.Where(x=>x.Direction == Side.Sell).Any() &&
                 _lastAo > _secondAo
                 && Regime.ValueString != "OnlyShort")
             {
                 // _tab.BuyAtLimit(VolumeFirst.ValueDecimal, _lastPrice + Slippage.ValueInt * _tab.Security.PriceStep);
 
-                _tab.BuyAtStop(VolumeFirst.ValueDecimal, _lastPrice, _lastPrice + Slippage.ValueInt * _tab.Security.PriceStep, StopActivateType.HigherOrEqual, 1);
+                // _tab.BuyAtStop(VolumeFirst.ValueDecimal, _lastPrice, _lastPrice + Slippage.ValueInt * _tab.Security.PriceStep, StopActivateType.HigherOrEqual, 1);
+                _tab.SellAtLimit(VolumeFirst.ValueDecimal, _lastPrice - Slippage.ValueInt * _tab.Security.PriceStep);
 
 
                 //_tab.BuyAtStop(VolumeFirst.ValueDecimal,
@@ -377,11 +378,12 @@ namespace OsEngine.Robots.Snapio
             }
 
             if (
-                !openPosition.Where(x=>x.Direction == Side.Sell).Any() &&
+                !openPosition.Where(x=>x.Direction == Side.Buy).Any() &&
                 _lastAo < _secondAo
                 && Regime.ValueString != "OnlyLong")
             {
-                _tab.SellAtLimit(VolumeFirst.ValueDecimal, _lastPrice - Slippage.ValueInt * _tab.Security.PriceStep);
+                // _tab.SellAtLimit(VolumeFirst.ValueDecimal, _lastPrice - Slippage.ValueInt * _tab.Security.PriceStep);
+                _tab.BuyAtStop(VolumeFirst.ValueDecimal, _lastPrice, _lastPrice + Slippage.ValueInt * _tab.Security.PriceStep, StopActivateType.HigherOrEqual, 1);
             }
         }
 
