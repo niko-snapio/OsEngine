@@ -320,12 +320,13 @@ namespace OsEngine.Robots.Snapio
 
             if (position.Direction == Side.Buy)
             {
-                var potentialLoss = position.EntryPrice - _lastFractalDown;
-                var takeProfit = position.EntryPrice + potentialLoss * TakeProfit.ValueDecimal;
-                if (position.ClosePrice < _lastFractalDown)
-                    _tab.CloseAtStop(position, _lastFractalDown, _lastFractalDown - Slippage.ValueInt * _tab.Security.PriceStep);
+                var _oldStopLossPrice = position.StopOrderPrice == 0 ? _lastFractalDown : position.StopOrderPrice;
+                var _stopLossPrice = _lastPrice - (position.EntryPrice - _oldStopLossPrice);
+                var takeProfit = _lastPrice + _stopLossPrice * TakeProfit.ValueDecimal;
+                if (position.StopOrderPrice < _stopLossPrice)
+                    _tab.CloseAtStop(position, _stopLossPrice, _stopLossPrice - Slippage.ValueInt * _tab.Security.PriceStep);
 
-                if (position.ProfitOrderPrice < takeProfit)
+                // if (position.ProfitOrderPrice < takeProfit)
                     _tab.CloseAtProfit(
                     position, takeProfit,
                     takeProfit - Slippage.ValueInt * _tab.Security.PriceStep);
@@ -335,9 +336,11 @@ namespace OsEngine.Robots.Snapio
                 var potentialLoss = _lastFractalUp - position.EntryPrice;
                 var takeProfit = position.EntryPrice - potentialLoss * TakeProfit.ValueDecimal;
 
-                _tab.CloseAtStop(position, _lastFractalUp, _lastFractalUp + Slippage.ValueInt * _tab.Security.PriceStep);
+                if (position.ClosePrice == 0 || position.ClosePrice > _lastFractalUp)
+                    _tab.CloseAtStop(position, _lastFractalUp, _lastFractalUp + Slippage.ValueInt * _tab.Security.PriceStep);
 
-                _tab.CloseAtProfit(
+                if (position.ProfitOrderPrice == 0 || position.ProfitOrderPrice > takeProfit)
+                    _tab.CloseAtProfit(
                     position, takeProfit,
                     takeProfit + Slippage.ValueInt * _tab.Security.PriceStep);
             }
@@ -349,12 +352,15 @@ namespace OsEngine.Robots.Snapio
         /// </summary>
         private void LogicOpenPosition()
         {
+            List<Position> openPosition = _tab.PositionsOpenAll;
+
             if (
                 // _lastPrice > _lastUpAlligator && _lastPrice > _lastMiddleAlligator && _lastPrice > _lastDownAlligator
                 //_lastPrice > _lastFractalUp
                 // && _lastAo > _secondAo && _secondAo > _thirdAo
                 // && ((_lastAo > _secondAo && _secondAo <= 0 && _lastAo > 0)
                 // || (_lastAo < 0 && _lastAo > _secondAo && _secondAo > _thirdAo))
+                !openPosition.Where(x=>x.Direction == Side.Buy).Any() &&
                 _lastAo > _secondAo
                 && Regime.ValueString != "OnlyShort")
             {
@@ -370,9 +376,9 @@ namespace OsEngine.Robots.Snapio
                 //        StopActivateType.HigherOrEqual, 1);
             }
 
-            if (_lastPrice < _lastUpAlligator && _lastPrice < _lastMiddleAlligator && _lastPrice < _lastDownAlligator
-                && _lastPrice < _lastFractalDown
-                && _secondAo > _lastAo && _secondAo < _thirdAo
+            if (
+                !openPosition.Where(x=>x.Direction == Side.Sell).Any() &&
+                _lastAo < _secondAo
                 && Regime.ValueString != "OnlyLong")
             {
                 _tab.SellAtLimit(VolumeFirst.ValueDecimal, _lastPrice - Slippage.ValueInt * _tab.Security.PriceStep);
@@ -392,10 +398,12 @@ namespace OsEngine.Robots.Snapio
                 return;
             }
 
-            if (position.Direction == Side.Buy)
-            {
-                Bot_PositionOpen(position);
-            }
+            Bot_PositionOpen(position);
+
+            //if (position.Direction == Side.Buy)
+            //{
+            //    Bot_PositionOpen(position);
+            //}
 
             //if (position.Direction == Side.Buy)
             //{
