@@ -288,9 +288,19 @@ namespace OsEngine.Robots.Snapio
                 return;
             }
 
+            LogMessage($"openPositions: {openPosition.Count}");
+
             if (openPosition == null || openPosition.Count == 0)
             {
                 LogicOpenPosition();
+            }
+        }
+
+        private void LogMessage(string v)
+        {
+            if (StartProgram == StartProgram.IsOsTrader)
+            {
+                _tab.SetNewLogMessage(v, LogMessageType.Trade);
             }
         }
 
@@ -333,7 +343,12 @@ namespace OsEngine.Robots.Snapio
                 isLastLongFailed = lastClosedPosition.Direction == Side.Buy
                     && (lastClosedPosition.ClosePrice - lastClosedPosition.EntryPrice) <= 0;
             }
-            
+
+            LogMessage($"Starting open position");
+            LogMessage($"'Sell' positions: {openPosition.Where(x => x.Direction == Side.Sell).Count()}");
+            LogMessage($"'Buy' positions: {openPosition.Where(x => x.Direction == Side.Buy).Count()}");
+            LogMessage($"_lastAo > _secondAo: {_lastAo > _secondAo}");
+
 
             if (
                 !openPosition.Where(x => x.Direction == Side.Sell).Any() &&
@@ -342,6 +357,8 @@ namespace OsEngine.Robots.Snapio
                 && Regime.ValueString != "OnlyLong")
             {
                 _tab.SellAtLimit(VolumeFirst.ValueDecimal, _lastPrice + Slippage.ValueInt * _tab.Security.PriceStep);
+                LogMessage($"Opened 'Sell' position");
+
             }
 
             if (
@@ -351,6 +368,7 @@ namespace OsEngine.Robots.Snapio
                 && Regime.ValueString != "OnlyShort")
             {
                 _tab.BuyAtStop(VolumeFirst.ValueDecimal, _lastPrice, _lastPrice - Slippage.ValueInt * _tab.Security.PriceStep, StopActivateType.HigherOrEqual, 1);
+                LogMessage($"Opened 'Buy' position");
             }
         }
 
