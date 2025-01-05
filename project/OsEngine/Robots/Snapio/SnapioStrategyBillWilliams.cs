@@ -220,11 +220,6 @@ namespace OsEngine.Robots.Snapio
                 return;
             }
 
-            if (StartProgram == StartProgram.IsOsTrader)
-            {
-                return;
-            }
-
             if (_alligator.ValuesUp == null ||
                 _alligator.Values == null ||
                 _alligator.ValuesDown == null ||
