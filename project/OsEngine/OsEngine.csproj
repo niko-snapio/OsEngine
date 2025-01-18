@@ -1212,6 +1212,8 @@
     <Compile Include="Robots\PositionsMicromanagement\UnsafeLimitsClosingSample.cs" />
     <Compile Include="Robots\Screeners\BollingerMomentumScreener.cs" />
     <Compile Include="Robots\Screeners\PinBarScreener.cs" />
+    <Compile Include="Robots\Snapio\SnapioStrategyForFourEmaAOAndMacdHistogram.cs" />
+    <Compile Include="Robots\Snapio\UTBotStc.cs" />
     <Compile Include="Robots\Snapio\SnapioStrategyBillWilliams.cs" />
     <Compile Include="Robots\TechSamples\AllSourcesInOneSample.cs" />
     <Compile Include="Robots\TechSamples\BlockIndicatorsSample.cs" />
