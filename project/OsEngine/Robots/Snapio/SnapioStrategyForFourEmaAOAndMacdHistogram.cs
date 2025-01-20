@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing.Drawing2D;
 using System.Drawing;
@@ -8,7 +8,6 @@ using OsEngine.Indicators;
 using OsEngine.OsTrader.Panels;
 using OsEngine.OsTrader.Panels.Attributes;
 using OsEngine.OsTrader.Panels.Tab;
-using System.Linq;
 
 /* Description
 trading robot for osengine
@@ -68,6 +67,8 @@ namespace OsEngine.Robots.Snapio
         Aindicator _EmaSlowGlob;
 
         // The last value of the indicators
+        private decimal _prevEmaFastLoc;
+        private decimal _prevEmaSlowLoc;
         private decimal _lastEmaFastLoc;
         private decimal _lastEmaSlowLoc;
         private decimal _lastEmaFastGlob;
@@ -246,6 +247,10 @@ namespace OsEngine.Robots.Snapio
             _prevAO = _AO.DataSeries[0].Values[_AO.DataSeries[0].Values.Count - 2];
             _prevMacd = _Macd.DataSeries[0].Values[_Macd.DataSeries[0].Values.Count - 2];
 
+            _prevEmaFastLoc = _EmaFastLoc.DataSeries[0].Values[_EmaFastLoc.DataSeries[0].Values.Count - 2];
+            _prevEmaSlowLoc = _EmaSlowLoc.DataSeries[0].Values[_EmaSlowLoc.DataSeries[0].Values.Count - 2];
+
+
             // If there are positions, then go to the position closing method
             if (openPositions != null && openPositions.Count != 0)
             {
@@ -258,10 +263,11 @@ namespace OsEngine.Robots.Snapio
                 return;
             }
             // If there are no positions, then go to the position opening method
-            if (openPositions == null || openPositions.Count == 0)
-            {
-                LogicOpenPosition(candles);
-            }
+            LogicOpenPosition(candles);
+            //if (openPositions == null || openPositions.Count == 0)
+            //{
+            //    LogicOpenPosition(candles);
+            //}
         }
 
         // Opening logic
@@ -269,13 +275,23 @@ namespace OsEngine.Robots.Snapio
         {
             List<Position> openPositions = _tab.PositionsOpenAll;
 
-            if (openPositions == null || openPositions.Count == 0)
+            if (openPositions == null || openPositions.Count < 2)
             {
                 decimal _slippage = Slippage.ValueDecimal * _tab.Securiti.PriceStep;
+
+                bool HasPosition(Side direction) => openPositions?.FindLast(x => x.Direction.Equals(direction)) != null;
+
+                var isLongPosition = HasPosition(Side.Buy);
+                var isShortPosition = HasPosition(Side.Sell);
+
+                //var isLongPosition = openPositions?.FindLast(x => x.Direction.Equals(Side.Buy)) != null;
+                //var isShortPosition = openPositions?.FindLast(x => x.Direction.Equals(Side.Sell)) != null;
                 // Long
-                if (Regime.ValueString != "OnlyShort") // If the mode is not only short, then we enter long
+                if (Regime.ValueString != "OnlyShort" && !isLongPosition) // If the mode is not only short, then we enter long
                 {
-                    if (_lastEmaFastLoc > _lastEmaSlowLoc &&
+                    if (
+                        _prevEmaFastLoc < _lastEmaFastLoc &&
+                        _lastEmaFastLoc > _lastEmaSlowLoc &&
                         _lastEmaFastGlob > _lastEmaSlowGlob &&
                         _lastAO > _prevAO &&
                         _lastMacd > _prevMacd)
@@ -285,10 +301,12 @@ namespace OsEngine.Robots.Snapio
                 }
 
                 // Short
-                if (Regime.ValueString != "OnlyLong") // If the mode is not only long, then we enter short
+                if (Regime.ValueString != "OnlyLong" && !isShortPosition) // If the mode is not only long, then we enter short
                 {
 
-                    if (_lastEmaFastLoc < _lastEmaSlowLoc &&
+                    if (
+                        _prevEmaFastLoc > _lastEmaFastLoc &&
+                        _lastEmaFastLoc < _lastEmaSlowLoc &&
                     _lastEmaFastGlob < _lastEmaSlowGlob &&
                     _lastAO < _prevAO &&
                     _lastMacd < _prevMacd)
@@ -323,39 +341,14 @@ namespace OsEngine.Robots.Snapio
                 if (pos.Direction == Side.Buy) // If the direction of the position is purchase
                 {
                     decimal lov = candles[candles.Count - 1].Low;
-                    stopPrice = lov - lov * TrailingValue.ValueDecimal / 100;
+                    stopPrice = lov - lov * (TrailingValue.ValueDecimal-0.3m) / 100;
                 }
                 else // If the direction of the position is sale
                 {
                     decimal high = candles[candles.Count - 1].High;
                     stopPrice = high + high * TrailingValue.ValueDecimal / 100;
                 }
-
-                if(pos.ClosePrice == 0)
-                {
-                    _tab.CloseAtTrailingStop(pos, stopPrice, stopPrice);
-                }
-
-                if (pos.ProfitOrderPrice == 0)
-                {
-                    _tab_PositionOpen(pos);
-                }
-            }
-        }
-
-        private void _tab_PositionOpen(Position position)
-        {
-
-            decimal _slippage = Slippage.ValueDecimal * _tab.Security.PriceStep;
-            var takeProfitPrice = position.EntryPrice + (position.EntryPrice - position.StopOrderPrice) * 1.5m;
-
-            if (position.Direction == Side.Buy)
-            {
-                _tab.CloseAtProfit(position, takeProfitPrice, takeProfitPrice - _slippage);
-            }
-            else
-            {
-                _tab.CloseAtProfit(position, takeProfitPrice, takeProfitPrice + _slippage);
+                _tab.CloseAtTrailingStop(pos, stopPrice, stopPrice);
             }
         }
 
@@ -381,7 +374,7 @@ namespace OsEngine.Robots.Snapio
             }
             else
             {
-                volume = Math.Round(volume, _tab.Securiti.DecimalsVolume);
+                volume = Math.Round(volume, _tab.Security.DecimalsVolume);
             }
             return volume;
         }
